@@ -1,6 +1,6 @@
 <?php
 
-namespace TiGR\Database;
+namespace TiGR\DatabaseLogger;
 
 class Backtracer
 {

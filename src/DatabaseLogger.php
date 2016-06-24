@@ -1,10 +1,10 @@
 <?php
 
-namespace TiGR\Database;
+namespace TiGR\DatabaseLogger;
 
 /**
  * Class DatabaseLogger
- * @package TiGR\Database
+ * @package TiGR\DatabaseLogger
  */
 class DatabaseLogger
 {
