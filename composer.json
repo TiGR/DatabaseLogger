@@ -1,0 +1,23 @@
+{
+    "name": "tigr/database-logger",
+    "description": "Database query logger with PDO Logging Statement",
+    "type": "library",
+    "require": {
+        "ext-pdo": "*"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Igor Tarasov",
+            "email": "tarasov.igor@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "TiGR\\DatabaseLogger\\": [
+                "src"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}
