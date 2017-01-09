@@ -171,14 +171,14 @@ class DatabaseLogger
 
     private function formatQuery($query)
     {
-        $query = preg_replace('/ (((left|right|outer|inner) )?join|where) /i', "\n  $1 ", $query);
-        $query = preg_replace('/ (order by|limit|having) /i', "\n    $1 ", $query);
-        $query = preg_replace('/ (union( (all|distinct))?) /i', "\n$1\n", $query);
+        $query = preg_replace('/(?<!\s) (((left|right|outer|inner) )?join|where) /i', "\n  $1 ", $query);
+        $query = preg_replace('/(?<!\s) (order by|limit|having) /i', "\n    $1 ", $query);
+        $query = preg_replace('/(?<!\s) (union( (all|distinct))?) /i', "\n$1\n", $query);
 
         $query = preg_replace(
             '/(?<=^|\s|\()(select|set|from|explain|update|insert|replace|left|right|outer|inner|join|where|order by|'
             . 'limit|as|and|or|having|union|all|distinct|on|is|not|null|true|false|desc|asc|between|in)'
-            . '(?=$|\s|\)|,)/ix', "<b>$1</b>", $query
+            . '(?=$|\s|\)|\(|,)/i', "<b>$1</b>", $query
         );
 
         return $query;
