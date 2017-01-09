@@ -29,7 +29,39 @@ class DatabaseLogger
 
     private function __construct()
     {
+        // private constructor - singleton can be created only by itself
+    }
 
+    /**
+     * @return DatabaseLogger
+     */
+    public static function getInstance()
+    {
+        if (!isset(self::$uniqueInstance)) {
+            self::$uniqueInstance = new self;
+        }
+
+        return self::$uniqueInstance;
+    }
+
+    public static function getQueryLog()
+    {
+        return self::getInstance()->getLog();
+    }
+
+    public static function getErrorLog()
+    {
+        return self::getInstance()->errorLog;
+    }
+
+    public static function getTotalQueriesNumber()
+    {
+        return self::getInstance()->queries;
+    }
+
+    public static function getTotalTime()
+    {
+        return self::getInstance()->time;
     }
 
     public static function logStart()
@@ -42,6 +74,17 @@ class DatabaseLogger
         self::getInstance()->logQuery($query, microtime(true) - self::$lastStartTime, $params);
     }
 
+    public static function logError($query, $error, $errorCode, $params = null)
+    {
+        self::getInstance()->_logError($query, microtime(true) - self::$lastStartTime, $error, $errorCode, $params);
+    }
+
+    public static function setQueryLogging($flag)
+    {
+        return self::getInstance()->_setQueryLogging($flag);
+    }
+
+
     public function logQuery($query, $time, $params)
     {
         $this->time += $time;
@@ -50,6 +93,60 @@ class DatabaseLogger
         if ($this->queryLogging) {
             $this->log[] = $this->prepareLogEntry($query, $time, $params, $this->debug);
         }
+    }
+
+    public function getLog()
+    {
+        if ($this->addExplain) {
+            $this->addExplain();
+        }
+
+        return $this->log;
+    }
+
+    public function _logError($query, $time, $error, $errorCode, $params = null)
+    {
+        if ($this->queryLogging or $this->debug) {
+            $logItem = $this->prepareLogEntry($query, $time, $params, true);
+            $logItem['error'] = [
+                'code' => $errorCode,
+                'message' => $error
+            ];
+
+            $this->errorLog[] = $logItem;
+        }
+    }
+
+    public function setDebug($flag)
+    {
+        $this->debug = (bool)$flag;
+        if ($this->debug) {
+            $this->_setQueryLogging(true);
+        }
+
+        return $this;
+    }
+
+    public function addIncludeDebugDir($namespace)
+    {
+        self::getInstance()->getBacktracer()->addIncludeDir($namespace);
+
+        return $this;
+    }
+
+    public function enableExplain(\PDO $pdo)
+    {
+        $this->addExplain = true;
+        $this->pdo = $pdo;
+
+        return $this;
+    }
+
+    public function setPrettyPrint($flag)
+    {
+        $this->prettyPrint = $flag;
+
+        return $this;
     }
 
     private function prepareLogEntry($query, $time, $params, $trace = false)
@@ -78,7 +175,11 @@ class DatabaseLogger
         $query = preg_replace('/ (order by|limit|having) /i', "\n    $1 ", $query);
         $query = preg_replace('/ (union( (all|distinct))?) /i', "\n$1\n", $query);
 
-        $query = preg_replace('/(?<=^|\s|\()(select|from|explain|update|insert|replace|left|right|outer|inner|join|where|order by|limit|as|and|or|having|union|all|distinct|on|is|not|null|true|false|desc|asc|between|in)(?=$|\s|\)|,)/i', "<b>$1</b>", $query);
+        $query = preg_replace(
+            '/(?<=^|\s|\()(select|set|from|explain|update|insert|replace|left|right|outer|inner|join|where|order by|'
+            . 'limit|as|and|or|having|union|all|distinct|on|is|not|null|true|false|desc|asc|between|in)'
+            . '(?=$|\s|\)|,)/ix', "<b>$1</b>", $query
+        );
 
         return $query;
     }
@@ -128,76 +229,11 @@ class DatabaseLogger
         return $this->backtracer;
     }
 
-    /**
-     * @return DatabaseLogger
-     */
-    public static function getInstance()
-    {
-        if (!isset(self::$uniqueInstance)) {
-            self::$uniqueInstance = new self;
-        }
-
-        return self::$uniqueInstance;
-    }
-
-    /**
-     * @param $query
-     * @param $error
-     * @param $errorCode
-     * @param null $params
-     */
-    public static function logError($query, $error, $errorCode, $params = null)
-    {
-        self::getInstance()->_logError($query, microtime(true) - self::$lastStartTime, $error, $errorCode, $params);
-    }
-
-    public function _logError($query, $time, $error, $errorCode, $params = null)
-    {
-        if ($this->queryLogging or $this->debug) {
-            $logItem = $this->prepareLogEntry($query, $time, $params, true);
-            $logItem['error'] = [
-                'code' => $errorCode,
-                'message' => $error
-            ];
-
-            $this->errorLog[] = $logItem;
-        }
-    }
-
-    public static function getTotalQueriesNumber()
-    {
-        return self::getInstance()->queries;
-    }
-
-    public static function getTotalTime()
-    {
-        return self::getInstance()->time;
-    }
-
-    public static function getErrorLog()
-    {
-        return self::getInstance()->errorLog;
-    }
-
-    public static function setQueryLogging($flag)
-    {
-        self::getInstance()->_setQueryLogging($flag);
-    }
-
     private function _setQueryLogging($flag)
     {
         $this->queryLogging = (bool)$flag;
 
         return $this;
-    }
-
-    public function getLog()
-    {
-        if ($this->addExplain) {
-            $this->addExplain();
-        }
-
-        return $this->log;
     }
 
     private function addExplain()
@@ -245,33 +281,5 @@ class DatabaseLogger
     private function enableLogging()
     {
         $this->pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, $this->statementClass);
-    }
-
-    public function enableExplain(\PDO $pdo)
-    {
-        $this->addExplain = true;
-        $this->pdo = $pdo;
-    }
-
-    public function addIncludeDebugDir($namespace)
-    {
-        self::getInstance()->getBacktracer()->addIncludeDir($namespace);
-    }
-
-    public function setDebug($flag)
-    {
-        $this->debug = (bool)$flag;
-        if ($this->debug) {
-            $this->_setQueryLogging(true);
-        }
-
-        return $this;
-    }
-
-    public function setPrettyPrint($flag)
-    {
-        $this->prettyPrint = $flag;
-
-        return $this;
     }
 }
