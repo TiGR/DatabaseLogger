@@ -245,7 +245,7 @@ class DatabaseLogger
             }
 
             if (strtolower(substr(ltrim($row['query'], " \t\r\n("), 0, 7)) == 'select ') {
-                $stmt = $this->pdo->prepare('explain extended ' . $row['query']);
+                $stmt = $this->pdo->prepare('explain ' . $row['query']);
                 $params = [];
                 if (!empty($row['params'])) {
                     foreach ($row['params'] as $key => $param) {
